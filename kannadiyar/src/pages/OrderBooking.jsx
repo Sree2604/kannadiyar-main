@@ -19,22 +19,22 @@ function OrderBooking() {
   const [couponCode, setCouponCode] = useState("");
   const [discountPrice, setDiscountPrice] = useState(0);
   const [subWeight, setSubWeight] = useState(0);
-  const [deliveryCharge, setDeliveryCharge] = useState();
+  const [deliveryCharge, setDeliveryCharge] = useState(60);
 
-  useEffect(() => {
-    const fetchTarrifCharges = async () => {
-      const res = await fetch(
-        `http://localhost:4000/calcTariff/?addressId=${selectedAddressId}&subWeight=${subWeight}`,
-        {
-          method: "GET",
-        }
-      );
-      const data = await res.json();
-      let temp = data;
-      setDeliveryCharge(data.deliveryCharge);
-    };
-    fetchTarrifCharges();
-  }, [selectedAddressId]);
+  // useEffect(() => {
+  //   const fetchTarrifCharges = async () => {
+  //     const res = await fetch(
+  //       `http://localhost:4000/calcTariff/?addressId=${selectedAddressId}&subWeight=${subWeight}`,
+  //       {
+  //         method: "GET",
+  //       }
+  //     );
+  //     const data = await res.json();
+  //     let temp = data;
+  //     setDeliveryCharge(data.deliveryCharge);
+  //   };
+  //   fetchTarrifCharges();
+  // }, [selectedAddressId]);
 
   // Function to receive the selected address ID from MyAddress component
   const handleAddressSelect = (addressId) => {
@@ -129,42 +129,45 @@ function OrderBooking() {
   };
 
   const handleCheckout = async () => {
-    // console.log(cartItems)
     if (!selectedAddressId) {
-      // If no address is selected, prevent checkout and prompt the user to select an address
       toast.error("Please select address", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
     if (cartItems.length === 0) {
-      // If the cart is empty, alert the user
       toast.error("Your cart is empty", {
         position: toast.POSITION.TOP_RIGHT,
       });
       return;
     }
+
     try {
       const response = await fetch(
-        "http://localhost:4000/create-checkout-session",
+        `http://localhost:4000/pay?amount=${subTotal}`,
         {
-          method: "POST",
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            items: cartItems,
-            addressId: selectedAddressId,
-          }), // Send cartItems to backend
+          credentials: "include",
         }
       );
-
       const data = await response.json();
-      window.location.href = data.url;
-      // Redirect to the checkout URL returned by the backend
+
+      console.log(data.paymentUrl);
+      if (response.ok) {
+        window.location.href = data.paymentUrl; // Redirect to the payment URL
+      } else {
+        toast.error("Error initiating payment", {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+      }
     } catch (error) {
       console.error("Error during checkout:", error);
-      // Handle error
+      toast.error("Error during checkout", {
+        position: toast.POSITION.TOP_RIGHT,
+      });
     }
   };
   useEffect(() => {

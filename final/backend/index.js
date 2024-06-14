@@ -9,8 +9,16 @@ const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const uniqid = require("uniqid");
+const sha256 = require('sha256');
+const axios = require('axios')
 dotenv.config();
-app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Specify the allowed origin
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE', 'REDIRECT'); // Specify the allowed HTTP methods
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization', '*'); // Specify the allowed headers
+  next();
+});
 app.use(express.json());
 
 const secretKey = process.env.SECRET_KEY;
@@ -23,19 +31,20 @@ app.use("/categories", express.static(path.join(__dirname, "categories")));
 app.use("/carousels", express.static(path.join(__dirname, "carousels")));
 
 const id = process.env.ID;
-const MERCHANT_ID = "M1N7YIUDDP8L";
 const PHONE_PE_HOST_URL = "https://api.phonepe.com/apis/hermes";
 const SALT_INDEX = 1;
 const SALT_KEY = "e77acd71-581a-4a4b-a19b-73599b654568";
-const APP_BE_URL = "http://localhost:3002";
+const MERCHANT_ID = "M1N7YIUDDP8L";
+const APP_BE_URL = "http://localhost:4000";
 
 app.get("/pay", async function (req, res, next) {
+  // Initiate a payment
 
   // Transaction amount
   const amount = +req.query.amount;
 
   // User ID is the ID of the user present in our application DB
-  let userId = "";
+  let userId = "MUID123";
 
   // Generate a unique merchant transaction ID for each transaction
   let merchantTransactionId = uniqid();
@@ -45,7 +54,7 @@ app.get("/pay", async function (req, res, next) {
     merchantId: MERCHANT_ID, //* PHONEPE_MERCHANT_ID . Unique for each account (private)
     merchantTransactionId: merchantTransactionId,
     merchantUserId: userId,
-    amount: amount * 100,
+    amount: amount * 100, // converting to paise
     redirectUrl: `${APP_BE_URL}/payment/validate/${merchantTransactionId}`,
     redirectMode: "REDIRECT",
     mobileNumber: "9999999999",
@@ -79,6 +88,7 @@ app.get("/pay", async function (req, res, next) {
     )
     .then(function (response) {
       console.log("response->", JSON.stringify(response.data));
+      // return res.json(response.data)
       res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
     })
     .catch(function (error) {
@@ -86,6 +96,7 @@ app.get("/pay", async function (req, res, next) {
     });
 });
 
+// endpoint to check the status of payment
 app.get("/payment/validate/:merchantTransactionId", async function (req, res) {
   const { merchantTransactionId } = req.params;
   // check the status of the payment using merchantTransactionId
@@ -126,6 +137,7 @@ app.get("/payment/validate/:merchantTransactionId", async function (req, res) {
     res.send("Sorry!! Error");
   }
 });
+
 
 
 // Endpoint to fetch all products
